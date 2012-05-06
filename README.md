@@ -1,8 +1,8 @@
 # Linux kernel module for random.org
 
-Is `/dev/urandom` just not good enough for you, and `/dev/random` sits
-in your base, stealing all your entropy? Yeah, me too (except not
-*really*, but maybe you've been there!)
+Is `/dev/urandom` just not good enough for you, and `/dev/random` just
+sits in your base, stealing all your entropy? Yeah, I feel that way
+too (except not *really*, but maybe you've been there!)
 
 To that end, I've written a Linux kernel module that provides an
 interface to [random.org](http://random.org), which is a service that
