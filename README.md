@@ -1,8 +1,9 @@
 # Linux kernel module for random.org
 
-Is `/dev/urandom` just not good enough for you, and `/dev/random` just
-sits in your base, stealing all your entropy? Yeah, I feel that way
-too (except not *really*, but maybe you've been there!)
+Is `/dev/urandom` just not good enough for you, while that lazy
+`/dev/random` guy just sits in your base, stealing all your entropy?
+Yeah, I feel that way too (except not *really*, but maybe you've been
+there!)
 
 To that end, I've written a Linux kernel module that provides an
 interface to [random.org](http://random.org), which is a service that
@@ -22,7 +23,7 @@ Clone the code, then just run:
 make
 ```
 
-And afterwords you should now have a shiny `randomdotorg.ko` kernel
+And afterwords you should have a shiny `randomdotorg.ko` kernel
 module! Load it with `insmod`:
 
     $ sudo insmod randomdotorg.ko
