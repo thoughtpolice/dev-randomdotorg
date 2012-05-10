@@ -27,6 +27,8 @@
 #include <linux/kprobes.h>
 #include <linux/kallsyms.h>
 
+#include "config.h"
+
 /* Initialization/teardown, and module descriptions/frontmatter */
 
 static int __init
@@ -47,6 +49,6 @@ MODULE_AUTHOR("Austin Seipp <mad.one@gmail.com>");
 MODULE_LICENSE("Dual MIT/GPL"); 
 MODULE_DESCRIPTION("Provides a /dev/randomdotorg device "
 		   "for atmospheric random data");
-MODULE_VERSION("0:0.1");
+MODULE_VERSION(DRIVER_VERSION);
 module_init(init_randomdotorg);
 module_exit(exit_randomdotorg);
