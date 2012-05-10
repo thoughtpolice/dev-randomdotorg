@@ -34,6 +34,21 @@ Now you should have a special device called `/dev/randomdotorg` that's
 similar to `/dev/urandom` or `/dev/random` but powered by the chaos of
 the atmosphere!
 
+# Rational, Security and other caveats
+
+This is obviously just a silly joke driver, mostly intended as a
+simple example of a linux driver.
+
+You should not use this module for generating secure random
+numbers. Continue to use `/dev/random` or `/dev/urandom` for that (why
+would you push secure random numbers off to a service?)
+
+This driver does not use SSL. That would be ridiculous but as a result
+you can be MITM'd, only reinforcing the point this shouldn't be used
+for any secret kind of randomness.
+
+That said, maybe you will find it educational or silly.
+
 # Join in
 
 File bugs in the GitHub [issue tracker][].
