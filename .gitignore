@@ -6,3 +6,6 @@
 *.order
 *.cmd
 /.tmp_versions/
+config.mk
+config.h
+.__kconftest

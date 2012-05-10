@@ -1,0 +1,71 @@
+#!/usr/bin/env perl
+
+#
+# configure: Simple configuration script for out-of-band kernel drivers
+# author:    Austin Seipp
+# license:   Public Domain
+#
+
+use feature 'say';
+use strict;
+use File::Path qw(remove_tree make_path);
+
+###############################
+## Configuration variables
+
+my $name    = "randomdotorg.ko";
+my $version = "0:0.1-dev";
+
+###############################
+## No more configuration
+
+my $confh   = 'config.h';
+my $confmk  = 'config.mk';
+my $confdir = '.__kconftest';
+
+my $confh_hdl;
+my $confmk_hdl;
+
+
+###############################
+## Functions
+
+sub init() {
+    say "configure: Configuring $name...";
+
+    # Blow away old stuff
+    unlink $confmk, $confh;
+    remove_tree $confdir;
+
+    # Create config.{h,mk} and test dir
+    qx(touch $confh $confmk);
+    make_path $confdir;
+
+    # Open files, write basic version info
+    open($confmk_hdl, ">>$confmk") or die "Couldn't open $confmk!";
+    open($confh_hdl,  ">>$confh")  or die "Couldn't open $confh";
+
+    say $confh_hdl "#define DRIVER_VERSION \"", $version, "\"";
+}
+
+sub fini() {
+    say "configure: creating config.mk...";
+    close($confmk_hdl);
+    say "configure: creating config.h...";
+    close($confh_hdl);
+
+    remove_tree $confdir;
+}
+
+sub compile_test() {
+}
+
+sub simple_test() {
+}
+
+
+###############################
+## Tests and main entry point
+
+init;
+fini;
