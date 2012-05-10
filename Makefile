@@ -5,7 +5,6 @@ PWD               := $(shell pwd)
 
 EXTRA_CFLAGS      += -Wall
 
-# A stupid - but working - hack!
 ifeq ($(KERNELRELEASE),)
 	include config.mk
 endif
