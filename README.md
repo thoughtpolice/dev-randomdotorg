@@ -17,7 +17,10 @@ other distributions and kernel versions are certainly welcome!
 
 Clone the code, then just run:
 
-    $ make
+```bash
+./configure # will need perl
+make
+```
 
 And afterwords you should now have a shiny `randomdotorg.ko` kernel
 module! Load it with `insmod`:
