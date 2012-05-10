@@ -6,8 +6,9 @@ PWD               := $(shell pwd)
 EXTRA_CFLAGS      += -Wall
 
 # A stupid - but working - hack!
-SUBDIRS           ?= $(PWD)
-include $(SUBDIRS)/config.mk
+ifeq ($(KERNELRELEASE),)
+	include config.mk
+endif
 
 default:
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
