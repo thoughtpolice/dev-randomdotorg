@@ -23,22 +23,32 @@
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/sched.h>
 #include <linux/kprobes.h>
 #include <linux/kallsyms.h>
 
 #include "config.h"
 
-/** Macros and top-level definitions */
+/** Macros, module parameters and top-level definitions */
 
 #define belch(lvl, ...) printk(lvl DRIVER_NAME ": " __VA_ARGS__)
+
+/* How many bytes to read from random.org at a time */
+static uint nbufsz = 16384;
+module_param(nbufsz,uint,S_IRUGO);
 
 /** Initialization/teardown, and module descriptions/frontmatter */
 
 static int __init
 init_drv(void)
 {
-  belch(KERN_INFO, "loaded");
+  if (nbufsz == 0) {
+    belch(KERN_ERR, "nbufsz must be > 0");
+    return -EINVAL;
+  }
+
+  belch(KERN_INFO, "loaded; nbufsz = %u", nbufsz);
   return 0;
 }
 
