@@ -9,6 +9,7 @@
 use feature 'say';
 use strict;
 use File::Path qw(remove_tree make_path);
+use Cwd;
 
 ###############################
 ## Configuration variables
@@ -30,7 +31,7 @@ my $confmk_hdl;
 ###############################
 ## Functions
 
-sub init() {
+sub init {
     say "configure: Configuring $name...";
 
     # Blow away old stuff
@@ -41,6 +42,14 @@ sub init() {
     qx(touch $confh $confmk);
     make_path $confdir;
 
+    # Write basic dummy $confdir/makefile
+    open(my $confdirmk_hdl, ">>$confdir/Makefile") 
+	or die "Couldn't open $confdir/Makefile!";
+
+    say $confdirmk_hdl "obj-m := dummy.o\nEXTRA_CFLAGS+=-Werror";
+
+    close $confdirmk_hdl;
+
     # Open files, write basic version info
     open($confmk_hdl, ">>$confmk") or die "Couldn't open $confmk!";
     open($confh_hdl,  ">>$confh")  or die "Couldn't open $confh";
@@ -49,24 +58,79 @@ sub init() {
     say $confh_hdl "#define DRIVER_VERSION \"", $version, "\"";
 }
 
-sub fini() {
+sub fini {
     say "configure: creating config.mk...";
-    close($confmk_hdl);
+    close $confmk_hdl;
     say "configure: creating config.h...";
-    close($confh_hdl);
+    close $confh_hdl;
 
     remove_tree $confdir;
 }
 
-sub compile_test() {
+sub compile_test {
+    my $testsrc  = shift;
+    my $testf    = $confdir."/dummy.c";
+    my $testobj  = $confdir."/dummy.o";
+    my $ksrc     = getcwd()."/".$confdir;
+    my $uname    = `uname -r`; chomp($uname);
+    my $kdir     = "/lib/modules/$uname/build";
+
+    # remove old files, write new file
+    unlink $testf, $testobj;
+    open(my $test_hdl, ">>$testf")
+	or die "Couldn't open $testf!";
+    print $test_hdl $testsrc;
+    close $test_hdl;
+
+    # compile and return the error code
+    `make -C $kdir SUBDIRS=$ksrc modules > /dev/null 2>&1`;
+    return ($? >> 8);
 }
 
-sub simple_test() {
+sub simple_check {
+    my $info      = shift;
+    my $headerdef = shift;
+    my $test      = shift;
+
+    print $info;
+
+    if (!compile_test($test)) {
+	say "yes";
+	say $confh_hdl "#define $headerdef";
+    } else {
+	say "no";
+    }
 }
 
-
-###############################
-## Tests and main entry point
 
 init;
+
+###############################
+## Tests
+
+simple_check "checking for inode.i_blksize... ", "HAVE_INODE_I_BLKSIZE", <<_EOF
+#include <linux/fs.h>
+void dummy(void)
+{
+    struct inode i;
+    i.i_blksize = 0;
+    return;
+}
+_EOF
+;
+
+simple_check "checking for inode.i_blkbits... ", "HAVE_INODE_I_BLKBITS", <<_EOF
+#include <linux/fs.h>
+void dummy(void)
+{
+    struct inode i;
+    i.i_blkbits = 0;
+    return;
+}
+_EOF
+;
+
+###############################
+## El fin
+
 fini;
