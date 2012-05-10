@@ -30,8 +30,8 @@ module! Load it with `insmod`:
 And make sure it's there:
 
     $ lsmod | grep randomdotorg
-	randomdotorg           12432  0
-	$ 
+    randomdotorg           12432  0
+    $ 
 
 Now you should have a special device called `/dev/randomdotorg` that's
 similar to `/dev/urandom` or `/dev/random` but powered by the chaos of
