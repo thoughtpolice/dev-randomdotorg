@@ -58,6 +58,7 @@ exit_drv(void)
   belch(KERN_INFO, "unloaded");
 }
 
+
 MODULE_AUTHOR("Austin Seipp <mad.one@gmail.com>");
 /* Actually MIT, but I don't want the kernel to bitch... */
 MODULE_LICENSE("Dual MIT/GPL"); 
