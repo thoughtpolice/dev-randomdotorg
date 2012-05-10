@@ -13,7 +13,7 @@ use File::Path qw(remove_tree make_path);
 ###############################
 ## Configuration variables
 
-my $name    = "randomdotorg.ko";
+my $name    = "randomdotorg";
 my $version = "0:0.1-dev";
 
 ###############################
@@ -45,6 +45,7 @@ sub init() {
     open($confmk_hdl, ">>$confmk") or die "Couldn't open $confmk!";
     open($confh_hdl,  ">>$confh")  or die "Couldn't open $confh";
 
+    say $confh_hdl "#define DRIVER_NAME \"", $name, "\"";
     say $confh_hdl "#define DRIVER_VERSION \"", $version, "\"";
 }
 

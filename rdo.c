@@ -29,19 +29,23 @@
 
 #include "config.h"
 
-/* Initialization/teardown, and module descriptions/frontmatter */
+/** Macros and top-level definitions */
+
+#define belch(lvl, ...) printk(lvl DRIVER_NAME ": " __VA_ARGS__)
+
+/** Initialization/teardown, and module descriptions/frontmatter */
 
 static int __init
-init_randomdotorg(void)
+init_drv(void)
 {
-  printk("hello!\n");
+  belch(KERN_INFO, "loaded");
   return 0;
 }
 
 static void __exit
-exit_randomdotorg(void)
+exit_drv(void)
 {
-  printk("goodbye!\n");
+  belch(KERN_INFO, "unloaded");
 }
 
 MODULE_AUTHOR("Austin Seipp <mad.one@gmail.com>");
@@ -50,5 +54,5 @@ MODULE_LICENSE("Dual MIT/GPL");
 MODULE_DESCRIPTION("Provides a /dev/randomdotorg device "
 		   "for atmospheric random data");
 MODULE_VERSION(DRIVER_VERSION);
-module_init(init_randomdotorg);
-module_exit(exit_randomdotorg);
+module_init(init_drv);
+module_exit(exit_drv);
