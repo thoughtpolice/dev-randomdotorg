@@ -36,6 +36,7 @@
 #include "ioctl.h"
 #include "config.h"
 
+#include "http_parser.h"
 
 
 
