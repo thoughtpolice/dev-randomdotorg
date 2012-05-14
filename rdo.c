@@ -56,8 +56,8 @@ rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
 {
   int ret = 0;
 
-  if(_IOC_TYPE(cmd) != IOC_MAGIC) return -EINVAL;
-  if(_IOC_NR(cmd) > IOC_MAXNR) return -EINVAL;
+  if(_IOC_TYPE(cmd) != IOC_MAGIC) return -ENOTTY;
+  if(_IOC_NR(cmd) > IOC_MAXNR) return -ENOTTY;
 
   switch (cmd) {
   case IOC_RESET:
@@ -69,7 +69,7 @@ rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
     break;
 
   default:
-    return -EINVAL;
+    return -ENOTTY;
   }
 
   return ret;
