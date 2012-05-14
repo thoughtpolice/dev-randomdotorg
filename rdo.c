@@ -46,7 +46,7 @@ struct rdo_dev {
 
 /** Module parameters and other top-level definitions */
 
-static uint nbufsz = 16384;
+static uint nbufsz = 8192;
 module_param(nbufsz, uint, S_IRUGO);
 
 static int rdo_major = 0;
@@ -93,6 +93,11 @@ init_drv(void)
 
   if (nbufsz == 0) {
     belch(KERN_ERR, "nbufsz must be > 0");
+    ret = -EINVAL;
+    goto err;
+  }
+  if (nbufsz > 16384) {
+    belch(KERN_ERR, "nbufsz must be < 16384");
     ret = -EINVAL;
     goto err;
   }
