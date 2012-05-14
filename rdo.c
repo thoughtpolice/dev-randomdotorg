@@ -32,16 +32,11 @@
 #include <linux/semaphore.h>
 #include <linux/types.h>
 
+#include "rdo.h"
+#include "ioctl.h"
 #include "config.h"
 
-/** Macros & types */
 
-#define belch(lvl, ...) printk(lvl DRIVER_NAME ": " __VA_ARGS__)
-
-struct rdo_dev {
-  struct semaphore sem;
-  struct cdev cdev;
-};
 
 
 /** Module parameters and other top-level definitions */
@@ -54,6 +49,28 @@ static struct rdo_dev* rdo_device;
 
 
 /** File operations */
+
+long
+rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
+{
+  int ret = 0;
+
+  if(_IOC_TYPE(cmd) != IOC_MAGIC) return -EINVAL;
+  if(_IOC_NR(cmd) > IOC_MAXNR) return -EINVAL;
+
+  switch (cmd) {
+  case IOC_RESET:
+    break;
+
+  case IOC_INFO:
+    break;
+
+  default:
+    return -EINVAL;
+  }
+
+  return ret;
+}
 
 int
 rdo_open(struct inode* inode, struct file* filp)
@@ -74,10 +91,12 @@ rdo_release(struct inode* inode, struct file* filp)
   return 0;
 }
 
+
 struct file_operations rdo_fops = {
-  .owner     = THIS_MODULE,
-  .open      = rdo_open,
-  .release   = rdo_release,
+  .owner          = THIS_MODULE,
+  .unlocked_ioctl = rdo_ioctl,
+  .open           = rdo_open,
+  .release        = rdo_release,
 };
 
 
