@@ -169,10 +169,11 @@ init_drv(void)
 static void __exit
 exit_drv(void)
 {
-  cdev_del(&rdo_device->cdev);
 
-  if (rdo_device)
+  if (rdo_device) {
+    cdev_del(&rdo_device->cdev);
     kfree(rdo_device);
+  }
 
   if (rdo_major)
     unregister_chrdev_region(MKDEV(rdo_major, 0), 1);
