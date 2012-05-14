@@ -24,19 +24,30 @@ make
 ```
 
 And afterwords you should have a shiny `randomdotorg.ko` kernel
-module! Load it with `insmod`:
+module! Load it using the `./load` script:
 
-    $ sudo insmod randomdotorg.ko
+    $ sudo ./load
+	
+This will call `insmod` on the driver, and create the `/dev/randomdotorg`
+device.
 
 And make sure it's there:
 
     $ lsmod | grep randomdotorg
     randomdotorg           12432  0
-    $ 
+    $ dmesg | grep randomdotorg
+	[ 2488.475038] randomdotorg: loaded; nbufsz = 16384
+	$ 
 
 Now you should have a special device called `/dev/randomdotorg` that's
 similar to `/dev/urandom` or `/dev/random` but powered by the chaos of
 the atmosphere!
+
+If you want to unload it, just call the `./unload` script which will
+`rmmod` the driver and `rm` the device:
+
+    $ sudo ./unload
+
 
 # Rational, Security and other caveats
 
