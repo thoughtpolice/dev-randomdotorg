@@ -27,19 +27,58 @@
 #include <linux/sched.h>
 #include <linux/kdev_t.h>
 #include <linux/fs.h>
+#include <linux/cdev.h>
+#include <linux/slab.h>
+#include <linux/semaphore.h>
 
 #include "config.h"
 
-/** Macros, module parameters and top-level definitions */
+/** Macros & types */
 
 #define belch(lvl, ...) printk(lvl DRIVER_NAME ": " __VA_ARGS__)
 
-/* How many bytes to read from random.org at a time */
+struct rdo_dev {
+  struct semaphore sem;
+  struct cdev cdev;
+};
+
+
+/** Module parameters and other top-level definitions */
+
 static uint nbufsz = 16384;
 module_param(nbufsz, uint, S_IRUGO);
 
-
 static int rdo_major = 0;
+static struct rdo_dev* rdo_device;
+
+
+/** File operations */
+
+int
+rdo_open(struct inode* inode, struct file* filp)
+{
+  struct rdo_dev* dev;
+
+  dev = container_of(inode->i_cdev, struct rdo_dev, cdev);
+  filp->private_data = dev;
+
+  belch(KERN_INFO, "/dev/randomdotorg opened");
+
+  return 0;
+}
+
+int
+rdo_release(struct inode* inode, struct file* filp)
+{
+  return 0;
+}
+
+struct file_operations rdo_fops = {
+  .owner     = THIS_MODULE,
+  .open      = rdo_open,
+  .release   = rdo_release,
+};
+
 
 /** Initialization/teardown, and module descriptions/frontmatter */
 
@@ -49,7 +88,7 @@ init_drv(void)
   int ret = -ENODEV;
   int result;
 
-  dev_t rdo_dev;
+  dev_t dev;
 
   if (nbufsz == 0) {
     belch(KERN_ERR, "nbufsz must be > 0");
@@ -57,17 +96,42 @@ init_drv(void)
     goto err;
   }
 
-  result = alloc_chrdev_region(&rdo_dev, 0, 1, "randomdotorg");
+  /* Allocation of character device & initialization */
+  result = alloc_chrdev_region(&dev, 0, 1, "randomdotorg");
+  rdo_major = MAJOR(dev);
   if (result < 0) {
     belch("alloc_chrdev_region() failed");
     goto err;
   }
 
-  rdo_major = MAJOR(rdo_dev);
+  rdo_device = kmalloc(sizeof(struct rdo_dev), GFP_KERNEL);
+  if (!rdo_device) {
+    belch(KERN_ERR, "kmalloc() for rdo_dev failed in init_drv()");
+    ret = -ENOMEM;
+    goto err_1;
+  }
+  memset(rdo_device, 0, sizeof(struct rdo_dev));
+  sema_init(&rdo_device->sem, 1);
 
+  /* cdev setup */
+  cdev_init(&rdo_device->cdev, &rdo_fops);
+  rdo_device->cdev.owner = THIS_MODULE;
+  rdo_device->cdev.ops   = &rdo_fops;
+  result = cdev_add(&rdo_device->cdev, MKDEV(rdo_major, 0), 1);
+  if(result < 0) {
+    belch(KERN_ERR, "cdev_add() for rdo_dev failed in init_drv()");
+    goto err_2;
+  }
+
+  /* Done */
   belch(KERN_INFO, "loaded; nbufsz = %u", nbufsz);
   return 0;
 
+  /* Error paths */
+ err_2:
+  kfree(rdo_device);
+ err_1:
+  unregister_chrdev_region(MKDEV(rdo_major, 0), 1);
  err:
   return ret;
 }
@@ -75,8 +139,12 @@ init_drv(void)
 static void __exit
 exit_drv(void)
 {
+
+  if (rdo_device)
+    kfree(rdo_device);
+
   if (rdo_major)
-    unregister_chrdev_region(MKDEV(rdo_major,0), 1);
+    unregister_chrdev_region(MKDEV(rdo_major, 0), 1);
 
   belch(KERN_INFO, "unloaded");
 }
