@@ -61,9 +61,11 @@ rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
 
   switch (cmd) {
   case IOC_RESET:
+    belch("ioctl(IOC_RESET)");
     break;
 
   case IOC_INFO:
+    belch("ioctl(IOC_INFO) -");
     break;
 
   default:
@@ -81,7 +83,9 @@ rdo_open(struct inode* inode, struct file* filp)
   dev = container_of(inode->i_cdev, struct rdo_dev, cdev);
   filp->private_data = dev;
 
+#ifdef DEBUG
   belch(KERN_INFO, "/dev/randomdotorg opened");
+#endif
 
   return 0;
 }
