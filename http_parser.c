@@ -21,13 +21,23 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+
+#include <linux/types.h>
+#include <linux/string.h>
+#include <linux/kernel.h>
+#include <asm/bug.h>
+
 #include "http_parser.h"
+/*
 #include <assert.h>
 #include <stddef.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+*/
+
+#define assert(x) BUG_ON(!(x))
 
 #ifndef ULLONG_MAX
 # define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
@@ -2031,7 +2041,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
 
   if (u->field_set & (1 << UF_PORT)) {
     /* Don't bother with endp; we've already validated the string */
-    unsigned long v = strtoul(buf + u->field_data[UF_PORT].off, NULL, 10);
+    unsigned long v = kstrtoul(buf + u->field_data[UF_PORT].off, 10, NULL);
 
     /* Ports have a max value of 2^16 */
     if (v > 0xffff) {

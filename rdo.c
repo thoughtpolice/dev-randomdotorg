@@ -30,6 +30,7 @@
 #include <linux/cdev.h>
 #include <linux/slab.h>
 #include <linux/semaphore.h>
+#include <linux/types.h>
 
 #include "config.h"
 
@@ -139,7 +140,6 @@ init_drv(void)
 static void __exit
 exit_drv(void)
 {
-
   if (rdo_device)
     kfree(rdo_device);
 

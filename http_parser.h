@@ -27,6 +27,7 @@ extern "C" {
 #define HTTP_PARSER_VERSION_MAJOR 1
 #define HTTP_PARSER_VERSION_MINOR 0
 
+  /*
 #include <sys/types.h>
 #if defined(_WIN32) && !defined(__MINGW32__) && (!defined(_MSC_VER) || _MSC_VER<1600)
 typedef __int8 int8_t;
@@ -43,6 +44,7 @@ typedef int ssize_t;
 #else
 #include <stdint.h>
 #endif
+  */
 
 /* Compile with -DHTTP_PARSER_STRICT=0 to make less checks, but run
  * faster

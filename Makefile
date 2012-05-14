@@ -1,4 +1,4 @@
-randomdotorg-objs := rdo.o # http_parser.o
+randomdotorg-objs := rdo.o http_parser.o
 obj-m             := randomdotorg.o
 KDIR              := /lib/modules/$(shell uname -r)/build
 PWD               := $(shell pwd)
