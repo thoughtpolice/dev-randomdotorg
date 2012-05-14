@@ -15,5 +15,5 @@ default:
 clean:
 	rm -f *.mod.c *.ko *.o *~ *.symvers *.order .randomdotorg.* .*.cmd
 	rm -rf .tmp_versions 
-distclean:
+distclean: clean
 	rm -f config.h config.mk
