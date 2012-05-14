@@ -169,6 +169,8 @@ init_drv(void)
 static void __exit
 exit_drv(void)
 {
+  cdev_del(&rdo_device->cdev);
+
   if (rdo_device)
     kfree(rdo_device);
 
