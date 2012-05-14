@@ -2041,7 +2041,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
 
   if (u->field_set & (1 << UF_PORT)) {
     /* Don't bother with endp; we've already validated the string */
-    unsigned long v = kstrtoul(buf + u->field_data[UF_PORT].off, 10, NULL);
+    unsigned long v = simple_strtol(buf + u->field_data[UF_PORT].off, NULL, 10);
 
     /* Ports have a max value of 2^16 */
     if (v > 0xffff) {
