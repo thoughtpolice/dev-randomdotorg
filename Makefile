@@ -11,6 +11,9 @@ endif
 
 default:
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
+
 clean:
 	rm -f *.mod.c *.ko *.o *~ *.symvers *.order .randomdotorg.* .*.cmd
-	rm -rf .tmp_versions config.h config.mk
+	rm -rf .tmp_versions 
+distclean:
+	rm -f config.h config.mk
