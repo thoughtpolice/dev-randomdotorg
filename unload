@@ -4,5 +4,5 @@ module="randomdotorg"
 device="randomdotorg"
 
 # remove and delete old nodes
-/sbin/rmmod ./$module.ko $* || exit 1
+/sbin/rmmod $module $* || exit 1
 rm -f /dev/${device}
