@@ -25,8 +25,8 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
-#include <linux/kprobes.h>
-#include <linux/kallsyms.h>
+#include <linux/kdev_t.h>
+#include <linux/fs.h>
 
 #include "config.h"
 
@@ -36,25 +36,48 @@
 
 /* How many bytes to read from random.org at a time */
 static uint nbufsz = 16384;
-module_param(nbufsz,uint,S_IRUGO);
+module_param(nbufsz, uint, S_IRUGO);
+
+
+static int rdo_major = 0;
 
 /** Initialization/teardown, and module descriptions/frontmatter */
 
 static int __init
 init_drv(void)
 {
+  int ret = -ENODEV;
+  int result;
+
+  dev_t rdo_dev;
+
   if (nbufsz == 0) {
     belch(KERN_ERR, "nbufsz must be > 0");
-    return -EINVAL;
+    ret = -EINVAL;
+    goto err;
   }
+
+  result = alloc_chrdev_region(&rdo_dev, 0, 1, "randomdotorg");
+  if (result < 0) {
+    belch("alloc_chrdev_region() failed");
+    goto err;
+  }
+
+  rdo_major = MAJOR(rdo_dev);
 
   belch(KERN_INFO, "loaded; nbufsz = %u", nbufsz);
   return 0;
+
+ err:
+  return ret;
 }
 
 static void __exit
 exit_drv(void)
 {
+  if (rdo_major)
+    unregister_chrdev_region(MKDEV(rdo_major,0), 1);
+
   belch(KERN_INFO, "unloaded");
 }
 
