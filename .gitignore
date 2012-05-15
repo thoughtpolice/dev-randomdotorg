@@ -9,3 +9,4 @@
 config.mk
 config.h
 .__kconftest
+test
