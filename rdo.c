@@ -53,7 +53,7 @@ static char* randomdotorg_ip = NULL;
 
 /** Networking */
 
-char*
+static char*
 get_randomdotorg_bytes(uint num)
 {
   // Connect
@@ -65,7 +65,7 @@ get_randomdotorg_bytes(uint num)
   return NULL;
 }
 
-int
+static int
 resolve_dns_ip(void)
 {
   char* dns    = "random.org";
@@ -96,7 +96,7 @@ resolve_dns_ip(void)
 
 /** File operations */
 
-ssize_t
+static ssize_t
 rdo_read(struct file* filp, char __user* buff, size_t count, loff_t *offp)
 {
   int ret = -EFAULT;
@@ -127,7 +127,7 @@ rdo_read(struct file* filp, char __user* buff, size_t count, loff_t *offp)
   return ret;
 }
 
-long
+static long
 rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
 {
   int ret = 0;
@@ -151,7 +151,7 @@ rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
   return ret;
 }
 
-int
+static int
 rdo_open(struct inode* inode, struct file* filp)
 {
   struct rdo_dev* dev;
@@ -162,7 +162,7 @@ rdo_open(struct inode* inode, struct file* filp)
   return 0;
 }
 
-int
+static int
 rdo_release(struct inode* inode, struct file* filp)
 {
   return 0;
