@@ -27,6 +27,7 @@ my $confdir = '.__kconftest';
 my $confh_hdl;
 my $confmk_hdl;
 
+my $error = 0;
 
 ###############################
 ## Functions
@@ -61,12 +62,24 @@ sub init {
 }
 
 sub fini {
-    say "configure: creating config.mk...";
+
     close $confmk_hdl;
-    say "configure: creating config.h...";
     close $confh_hdl;
 
+    if ($error) {
+	unlink $confh, $confmk;
+    } else {
+	say "configure: creating config.mk...";
+	say "configure: creating config.h...";
+    }
+
     remove_tree $confdir;
+}
+
+sub onoes {
+    $error = 1;
+    fini;
+    die shift;
 }
 
 sub compile_test {
@@ -85,6 +98,7 @@ sub compile_test {
     close $test_hdl;
 
     # compile and return the error code
+    #say "make -C $kdir SUBDIRS=$ksrc modules > /dev/null 2>&1";
     `make -C $kdir SUBDIRS=$ksrc modules > /dev/null 2>&1`;
     return ($? >> 8);
 }
@@ -96,12 +110,14 @@ sub simple_check {
 
     print $info;
 
-    if (!compile_test($test)) {
+    my $r = compile_test($test);
+    if (!$r) {
 	say "yes";
 	say $confh_hdl "#define $headerdef";
     } else {
 	say "no";
     }
+    return $r;
 }
 
 
@@ -109,28 +125,25 @@ init;
 
 ###############################
 ## Tests
+my $r;
 
-simple_check "checking for inode.i_blksize... ", "HAVE_INODE_I_BLKSIZE", <<_EOF
-#include <linux/fs.h>
-void dummy(void)
+
+## dns_resolver.h
+$r = simple_check "checking for dns_resolver.h... ", "HAVE_DNS_RESOLVER_H", <<_EOF
+#include <linux/string.h>
+#include <linux/types.h>
+#include <linux/dns_resolver.h>
+int
+dummy(void)
 {
-    struct inode i;
-    i.i_blksize = 0;
-    return;
+    char* host = "google.com";
+    char* ipaddr;
+    return dns_query(NULL, host, strlen(host), NULL, &ipaddr, NULL);
 }
 _EOF
 ;
 
-simple_check "checking for inode.i_blkbits... ", "HAVE_INODE_I_BLKBITS", <<_EOF
-#include <linux/fs.h>
-void dummy(void)
-{
-    struct inode i;
-    i.i_blkbits = 0;
-    return;
-}
-_EOF
-;
+onoes "dns_resolver.h is required!" if $r;
 
 ###############################
 ## El fin
