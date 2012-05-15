@@ -33,6 +33,7 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/dns_resolver.h>
+#include <net/sock.h>
 
 #include "rdo.h"
 #include "ioctl.h"
@@ -53,45 +54,164 @@ static char* randomdotorg_ip = NULL;
 
 /** Networking */
 
-static char*
-get_randomdotorg_bytes(uint num)
+static unsigned int
+inet_addr(char* ip)
 {
-  // Connect
+  int a, b, c, d;
+  char addr[4];
 
-  // Send GET request
+  // TODO: terrible
+  sscanf(ip, "%d.%d.%d.%d", &a, &b, &c, &d);
+  addr[0] = a;
+  addr[1] = b;
+  addr[2] = c;
+  addr[3] = d;
+  
+  return *(unsigned int *)addr;
+}
 
-  // Get response
+
+static struct socket*
+connect_host(char* ip)
+{
+  struct socket* sk = NULL;
+  int result;
+
+  result = sock_create(AF_INET, SOCK_STREAM, 0, &sk);
+  if (result < 0) {
+    belch(KERN_ERR, "Couldn't sock_create()");
+    return NULL;
+  }
+
+  struct sockaddr_in addr = { 0, };
+  addr.sin_family         = AF_INET;
+  addr.sin_port           = htons(80);
+  addr.sin_addr.s_addr    = inet_addr(ip);
+
+  result = sk->ops->connect(sk, (struct sockaddr*)&addr, sizeof(struct sockaddr_in), 0);
+  if (result < 0) {
+    belch(KERN_ERR, "couldn't kconnect(\"%s:80\")!", ip);
+    goto err;
+  }
+  
+  belch(KERN_INFO, "connected to %s:80", ip);
+  return sk;
+
+ err:
+  if (sk) {
+    sk->ops->release(sk);
+    sock_release(sk);
+  }
 
   return NULL;
 }
 
 static int
-resolve_dns_ip(void)
+send_host(struct socket* sk, char* buf)
 {
-  char* dns    = "random.org";
+  size_t len = strlen(buf)-1;
+
+  struct msghdr msg;
+  struct iovec iov;
+
+  iov.iov_base = (void*)buf;
+  iov.iov_len = (__kernel_size_t)len;
+
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = NULL;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  return sock_sendmsg(sk, &msg, len);
+}
+
+static unsigned int
+recv_host(struct socket* sk, char** buf, size_t count)
+{
+  char* kbuf = kmalloc(count, GFP_KERNEL);
+  if(!kbuf)
+    return -ENOMEM;
+
+  memset(kbuf, 0x41, count);
+
+  *buf = kbuf;
+  return count;
+}
+
+static void
+disconnect_host(struct socket* sk)
+{
+  if (sk) {
+    belch(KERN_INFO, "disconnecting...");
+    sk->ops->release(sk);
+    sock_release(sk);
+  }
+}
+
+static char*
+get_randomdotorg_bytes(size_t num)
+{
+  int result;
+  char* kbuf = NULL;
+
+  // Connect
+  struct socket* sk = connect_host(randomdotorg_ip);
+  if (!sk) {
+    belch(KERN_ERR, "could not connect to host");
+    return NULL;
+  }
+
+  // Send GET request
+  result = send_host(sk, "GET /cgi-bin/randbyte?nbytes=10&format=f\r\n");
+  if (result < 0) {
+    belch(KERN_ERR, "couldn't send GET request!");
+    goto end;
+  }
+
+  // Get response
+  result = recv_host(sk, &kbuf, num);
+  if (result < 0) {
+    belch(KERN_ERR, "couldn't receive %lu bytes!", num);
+    kbuf = NULL;
+    goto end;
+  }
+
+  // Done
+ end:
+  disconnect_host(sk);
+  return kbuf;
+}
+
+static char*
+resolve_dns_ip(char* dnsname)
+{
   char* ipaddr = NULL;
 
-  belch(KERN_INFO, "resolving random.org IP...");
+  belch(KERN_INFO, "resolving IP for %s...", dnsname);
 
-  int result = dns_query(NULL, dns, strlen(dns), NULL, &ipaddr, NULL);
+  int result = dns_query(NULL, dnsname, strlen(dnsname), NULL, &ipaddr, NULL);
   if(result < 0) {
+    belch(KERN_ERR, "could not dns_query(\"%s\")!", dnsname);
     kfree(ipaddr);
-    return -EHOSTDOWN;
+    return NULL;
   }
 
   int count = result;
-  void* buf = kmalloc(count+1, GFP_KERNEL);
+  char* buf = kmalloc(count+1, GFP_KERNEL);
   if(!buf) {
+    belch(KERN_ERR, "kmalloc for resolve_dns_ip failed");
     kfree(ipaddr);
-    return -ENOMEM;
+    return NULL;
   }
 
   memset(buf, 0, count+1);
   memcpy(buf, ipaddr, count);
   kfree(ipaddr);
 
-  randomdotorg_ip = buf;
-  return 0;
+  return buf;
 }
 
 /** File operations */
@@ -101,14 +221,12 @@ rdo_read(struct file* filp, char __user* buff, size_t count, loff_t *offp)
 {
   int ret = -EFAULT;
 
-  char* kbuf = kmalloc(count, GFP_KERNEL);
+  belch(KERN_INFO, "rdo_read: reading %lu bytes", count);
+  char* kbuf = get_randomdotorg_bytes(count);
   if(!kbuf) {
-    ret = -ENOMEM;
+    ret = -EHOSTDOWN;
     goto end;
   }
-
-  memset(kbuf, 0x41, count);
-  belch(KERN_DEBUG, "rdo_open() - kmalloc'd %lu bytes", count);
 
   /* Make sure copy_to_user returns 0, i.e. '0 bytes remain
      to be copied' */
@@ -187,6 +305,8 @@ init_drv(void)
   int result;
   dev_t dev;
 
+  belch(KERN_INFO, "initializing");
+
   if (nbufsz == 0) {
     belch(KERN_ERR, "nbufsz must be > 0");
     ret = -EINVAL;
@@ -226,13 +346,22 @@ init_drv(void)
   }
 
   /* Resolve random.org IP address initially */
-  result = resolve_dns_ip();
-  if(result < 0) {
-    ret = result;
+  char* ip = resolve_dns_ip("random.org");
+  if(!ip) {
+    ret = -EHOSTDOWN;
     belch(KERN_ERR, "resolve_dns_ip() failed");
     goto err_3;
   }
+  randomdotorg_ip = ip;
   belch(KERN_INFO, "resolved random.org ip (= %s)", randomdotorg_ip);
+
+  /* Connect once */
+  char* bytes = get_randomdotorg_bytes(nbufsz);
+  if (!bytes) {
+    ret = -EHOSTDOWN;
+    belch(KERN_ERR, "Couldn't connect the first time!");
+    goto err_3;
+  }
 
   /* Done loading */
   belch(KERN_INFO, "loaded; nbufsz = %u", nbufsz);
