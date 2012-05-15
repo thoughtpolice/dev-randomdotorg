@@ -3,7 +3,7 @@ obj-m             := randomdotorg.o
 KDIR              := /lib/modules/$(shell uname -r)/build
 PWD               := $(shell pwd)
 
-EXTRA_CFLAGS      += -Wall
+EXTRA_CFLAGS      += -Wall -Wno-declaration-after-statement
 
 ifeq ($(KERNELRELEASE),)
 	include config.mk

@@ -31,13 +31,13 @@
 #include <linux/slab.h>
 #include <linux/semaphore.h>
 #include <linux/types.h>
+#include <linux/uaccess.h>
 
 #include "rdo.h"
 #include "ioctl.h"
 #include "config.h"
 
 #include "http_parser.h"
-
 
 
 /** Module parameters and other top-level definitions */
@@ -50,6 +50,37 @@ static struct rdo_dev* rdo_device;
 
 
 /** File operations */
+
+ssize_t
+rdo_read(struct file* filp, char __user* buff, size_t count, loff_t *offp)
+{
+  int ret = -EFAULT;
+
+  char* kbuf = kmalloc(count, GFP_KERNEL);
+  if(!kbuf) {
+    ret = -ENOMEM;
+    goto end;
+  }
+
+  memset(kbuf, 0x41, count);
+  belch(KERN_DEBUG, "rdo_open() - kmalloc'd %lu bytes", count);
+
+  /* Make sure copy_to_user returns 0, i.e. '0 bytes remain
+     to be copied' */
+  if(copy_to_user(buff, kbuf, count) != 0) {
+    ret = -EFAULT;
+    goto err_1;
+  }
+
+  *offp += count;
+  ret    = count;
+
+ err_1:
+  kfree(kbuf);
+
+ end:
+  return ret;
+}
 
 long
 rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
@@ -65,7 +96,7 @@ rdo_ioctl(struct file* filp, unsigned int cmd, unsigned long arg)
     break;
 
   case IOC_INFO:
-    belch("ioctl(IOC_INFO) -");
+    belch("ioctl(IOC_INFO)");
     break;
 
   default:
@@ -99,6 +130,7 @@ rdo_release(struct inode* inode, struct file* filp)
 
 struct file_operations rdo_fops = {
   .owner          = THIS_MODULE,
+  .read           = rdo_read,
   .unlocked_ioctl = rdo_ioctl,
   .open           = rdo_open,
   .release        = rdo_release,
@@ -112,7 +144,6 @@ init_drv(void)
 {
   int ret = -ENODEV;
   int result;
-
   dev_t dev;
 
   if (nbufsz == 0) {
@@ -126,7 +157,7 @@ init_drv(void)
     goto err;
   }
 
-  /* Allocation of character device & initialization */
+  /* Allocation and initialization of character device */
   result = alloc_chrdev_region(&dev, 0, 1, "randomdotorg");
   rdo_major = MAJOR(dev);
   if (result < 0) {
@@ -143,7 +174,7 @@ init_drv(void)
   memset(rdo_device, 0, sizeof(struct rdo_dev));
   sema_init(&rdo_device->sem, 1);
 
-  /* cdev setup */
+  /* Register device callbacks via cdev_{init,add} */
   cdev_init(&rdo_device->cdev, &rdo_fops);
   rdo_device->cdev.owner = THIS_MODULE;
   rdo_device->cdev.ops   = &rdo_fops;
@@ -153,7 +184,7 @@ init_drv(void)
     goto err_2;
   }
 
-  /* Done */
+  /* Done loading */
   belch(KERN_INFO, "loaded; nbufsz = %u", nbufsz);
   return 0;
 
@@ -169,7 +200,6 @@ init_drv(void)
 static void __exit
 exit_drv(void)
 {
-
   if (rdo_device) {
     cdev_del(&rdo_device->cdev);
     kfree(rdo_device);
