@@ -32,6 +32,7 @@
 #include <linux/semaphore.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+#include <linux/dns_resolver.h>
 
 #include "rdo.h"
 #include "ioctl.h"
@@ -48,6 +49,50 @@ module_param(nbufsz, uint, S_IRUGO);
 static int rdo_major = 0;
 static struct rdo_dev* rdo_device;
 
+static char* randomdotorg_ip = NULL;
+
+/** Networking */
+
+char*
+get_randomdotorg_bytes(uint num)
+{
+  // Connect
+
+  // Send GET request
+
+  // Get response
+
+  return NULL;
+}
+
+int
+resolve_dns_ip(void)
+{
+  char* dns    = "random.org";
+  char* ipaddr = NULL;
+
+  belch(KERN_INFO, "resolving random.org IP...");
+
+  int result = dns_query(NULL, dns, strlen(dns), NULL, &ipaddr, NULL);
+  if(result < 0) {
+    kfree(ipaddr);
+    return -EHOSTDOWN;
+  }
+
+  int count = result;
+  void* buf = kmalloc(count+1, GFP_KERNEL);
+  if(!buf) {
+    kfree(ipaddr);
+    return -ENOMEM;
+  }
+
+  memset(buf, 0, count+1);
+  memcpy(buf, ipaddr, count);
+  kfree(ipaddr);
+
+  randomdotorg_ip = buf;
+  return 0;
+}
 
 /** File operations */
 
@@ -113,10 +158,6 @@ rdo_open(struct inode* inode, struct file* filp)
 
   dev = container_of(inode->i_cdev, struct rdo_dev, cdev);
   filp->private_data = dev;
-
-#ifdef DEBUG
-  belch(KERN_INFO, "/dev/randomdotorg opened");
-#endif
 
   return 0;
 }
@@ -184,11 +225,22 @@ init_drv(void)
     goto err_2;
   }
 
+  /* Resolve random.org IP address initially */
+  result = resolve_dns_ip();
+  if(result < 0) {
+    ret = result;
+    belch(KERN_ERR, "resolve_dns_ip() failed");
+    goto err_3;
+  }
+  belch(KERN_INFO, "resolved random.org ip (= %s)", randomdotorg_ip);
+
   /* Done loading */
   belch(KERN_INFO, "loaded; nbufsz = %u", nbufsz);
   return 0;
 
   /* Error paths */
+ err_3:
+  kfree(randomdotorg_ip);
  err_2:
   kfree(rdo_device);
  err_1:
@@ -200,6 +252,9 @@ init_drv(void)
 static void __exit
 exit_drv(void)
 {
+  if (randomdotorg_ip)
+    kfree(randomdotorg_ip);
+
   if (rdo_device) {
     cdev_del(&rdo_device->cdev);
     kfree(rdo_device);
