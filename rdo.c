@@ -158,6 +158,11 @@ get_randomdotorg_bytes(size_t num)
   char* kbuf = NULL;
 
   // Connect
+  if (!randomdotorg_ip) {
+    belch(KERN_ERR, "no IP address resolved");
+    return NULL;
+  }
+
   struct socket* sk = connect_host(randomdotorg_ip);
   if (!sk) {
     belch(KERN_ERR, "could not connect to host");
